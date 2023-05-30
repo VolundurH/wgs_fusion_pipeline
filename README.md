@@ -21,7 +21,7 @@ The second file to be supplied is a table of fusions that are to be validated. T
 |------------|-----------|-------|
 |fusion_id | Unique identifier for each fusion transcript |1|
 |sample_id | Unique identifier / barcode for each sample | sample_01|
-|path |Absolute path to the raw WGS files | /disk/data/sample1/sample1.bam|
+|path |Absolute or bound path to the raw WGS files | /disk/data/sample1/sample1.bam|
 |fiveprime_chr |5' chromosome| 8|
 |fiveprime_strand |5' strand| -|
 |fiveprime_search_start | 5' fusion search region start coordinate| 54956927|
