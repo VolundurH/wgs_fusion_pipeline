@@ -15,11 +15,11 @@ mamba install -c bioconda -c conda-forge -c anaconda -y samtools=1.13 bedtools=2
 
 The user needs to supply two input files. The first is an indexed fasta file of the reference genome that the WGS data to be queried is aligned to. These should be located under ?input/ref_genome/?  in .fa and .fai formats.
 
-The second file to be supplied is a table of fusions that are to be validated. This should be a tab-delimited table with the following columns:
+The second file to be supplied is a table of fusions that are to be validated. This should be a tab-delimited table with the following columns (case sensitive!):
 
 |Input column|Description|Example|
-|------------|-----------|-------|
-|fusion_id | Unique identifier for each fusion transcript |1|
+|------------|-------------------|
+|fusion_id | Unique identifier for each fusion transcript | 1|
 |sample_id | Unique identifier / barcode for each sample | sample_01|
 |path |Absolute or bound path to the raw WGS files | /disk/data/sample1/sample1.bam|
 |fiveprime_chr |5' chromosome| 8|

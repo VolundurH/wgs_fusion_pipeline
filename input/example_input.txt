@@ -1,0 +1,13 @@
+fusion_id	sample_id	fiveprimepartner	threeprimepartner	fiveprime_chr	fiveprime_search_start	fiveprime_junction	fiveprime_search_end	fiveprime_strand	threeprime_chr	threeprime_search_start	threeprime_junction	threeprime_search_end	threeprime_strand	path
+1	MCF7	BCAS4	BCAS3	20	49413010	49413510	49501213	+	17	58752814	59445688	59446188	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8652105.bam
+2	MCF7	RPS6KB1	VMP1	17	57991563	57992063	58029925	+	17	57782553	57917129	57917629	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8652105.bam
+3	MCF7	TXLNG	SYAP1	X	16804212	16804712	16864642	+	X	16735755	16753350	16753850	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8652105.bam
+4	MCF7	ADAMTS19	SLC27A6	5	128795675	128796175	128798382	+	5	127871706	128364038	128364538	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8652105.bam
+5	MCF7	PAPOLA	AK7	14	96968437	96968937	97035448	+	14	96856448	96904172	96904672	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8652105.bam
+6	MCF7	POP1	MATN2	8	99129593	99130093	99174062	+	8	98879068	99042690	99043190	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8652105.bam
+7	MCF7	SULF2	PRICKLE2	20	46283092	46414087	46414587	-	3	64085101	64085601	64090807	-	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8652105.bam
+8	BT-474	ACACA	STAC2	17	35439923	35479453	35479953	-	17	37373926	37374426	37384125	-	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8639205.bam
+9	BT-474	STX16	RAE1	20	57234190	57234690	57292466	+	20	55924066	55929088	55929588	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8639205.bam
+10	BT-474	VAPB	IKZF3	20	56964073	56964573	57028157	+	17	37933520	37934020	38022441	-	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8639205.bam
+11	BT-474	GLB1	CMTM7	3	33036100	33055548	33056048	-	3	32431163	32483332	32483832	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8639205.bam
+12	BT-474	ACACA	ERBB2	17	35439923	35726313	35726813	-	17	37842167	37871539	37872039	+	/disk/H730/noncoding/projects/cell_line_wgs_data/SRR8639205.bam
