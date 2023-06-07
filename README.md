@@ -43,7 +43,7 @@ If running locally, the recommended way of installing singularity is via conda. 
 
 The singularity container can subsequently be built using the following:
 
-`singularity build ?-fakeroot singularity/fusion_pipeline.sif singularity/fusion_pipeline.def`
+`singularity build --fakeroot singularity/fusion_pipeline.sif singularity/fusion_pipeline.def`
 
 The full fusion validation pipeline can then be run using:
 
