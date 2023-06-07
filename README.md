@@ -33,6 +33,8 @@ The second file to be supplied is a table of fusions that are to be validated. T
 
 Other columns are accepted but will be ignored. The order of the columns does not matter. An example of an input table can be found in the input/ directory.
 
+In order for breakpoints to be identified, the aligned reads in the WGS data must not hard-clipped. Data preprocessing is a crucial step for the pipeline to run correctly. Coordinates for fusion transcripts and gene annotation must be in the same assembly of the human genome as the aligned WGS data, and tools such as LiftOver from UCSC can be used to convert gene and fusion junction coordinates to match WGS data.
+
 ## Running the pipeline
 
 If running locally, the recommended way of installing singularity is via conda. A simple environment can be create using the following command:
