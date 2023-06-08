@@ -55,7 +55,8 @@ disc_reads %>%
 disc_read_clusters <- disc_reads %>% 
   mutate(width = nchar(SEQ), 
     start = as.numeric(POS)) %>% 
-  select(fusion_id, QNAME, query, width, start, fiveprime_strand, threeprime_strand) %>% 
+  mutate(QNAME_ID = row_number()) %>% 
+  select(fusion_id, QNAME_ID, query, width, start, fiveprime_strand, threeprime_strand) %>% 
   mutate(end = start + width) %>% 
   mutate(strand = ifelse(query == "fiveprime_reads", fiveprime_strand, threeprime_strand)) %>% 
   select(-c(fiveprime_strand, threeprime_strand)) %>% 
@@ -75,7 +76,7 @@ disc_read_clusters <- disc_reads %>%
   select(-c(start, end, width, filt)) %>% 
   rename(start = istart, end = iend, width = iwidth) %>% 
   group_by(fusion_id, query, strand, start, end, width) %>% 
-  summarise(n_disc_reads_in_cluster = n(), disc_reads_in_cluster = paste0(QNAME, collapse = ";")) %>% 
+  summarise(n_disc_reads_in_cluster = n(), disc_reads_in_cluster = paste0(QNAME_ID, collapse = ";")) %>% 
   ungroup()
 
 # Assign a cluster ID and associate to linked clusters ----
