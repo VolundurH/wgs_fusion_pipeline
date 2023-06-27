@@ -53,6 +53,6 @@ Singularity containers, by default, provide an isolated environment with limited
 
 As an example, assume the WGS data is stored in the directory "data" located under "/disk/projects/data". To bind the data to the singularity, the following command would be run:
 
-`singularity exec --bind /disk/projects/data:/data fusion_pipeline.sif Rscript scripts/fusion_validation_pipeline.R`
+`singularity exec --bind /disk/projects/data:/data singularity/fusion_pipeline.sif Rscript scripts/fusion_validation_pipeline.R`
 
 In this example, the "--bind" option is used to bind the "/disk/projects/data" directory on the host system to the "/data" directory inside the container. By doing so, the container will have access to the files within that directory. The "path" column in the input file fusion_search_table.txt should reflect the bound data structure.
