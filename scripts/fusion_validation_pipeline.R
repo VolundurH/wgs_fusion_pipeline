@@ -67,7 +67,9 @@ print("Searching for breakpoint-supporting reads...\n")
 disc_read_clusters <- disc_reads %>% 
   mutate(width = nchar(SEQ), 
     start = as.numeric(POS)) %>% 
-  mutate(QNAME_ID = row_number()) %>% 
+  nest(.by = c(fusion_id, QNAME)) |> 
+  mutate(QNAME_ID = row_number()) %>%  
+  unnest(data) |> 
   select(fusion_id, QNAME_ID, query, width, start, fiveprime_strand, threeprime_strand) %>% 
   mutate(end = start + width) %>% 
   mutate(strand = ifelse(query == "fiveprime_reads", fiveprime_strand, threeprime_strand)) %>% 
