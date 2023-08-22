@@ -13,11 +13,23 @@
 # Load packages and input data
 
 library(tidyverse)
+library(optparse)
+
+input_options = list(
+  make_option(c("-i", "--input_file"), default = "input/fusion_search_table.txt", help = "Location of input file containing genomic regions"),
+  make_option(c("-r", "--ref_genome"), default = "input/ref_genome/hg19.fa", help = "Location of reference genome fasta file"), 
+  make_option(c("-d", "--distance_filter"), default = 4000, help = "Minium fragment size of discorand read pairs (default = 4000)")
+)
+
+input_file <- parse_args(OptionParser(option_list = input_options))$input_file
+ref_genome <- parse_args(OptionParser(option_list = input_options))$ref_genome
+
+
 sam_fields <- c("QNAME","FLAG","RNAME","POS","MAPQ","CIGAR","MRNM","MPOS","ISIZE","SEQ","QUAL","OPT")
-input <- read_tsv("input/fusion_search_table.txt")
+input <- read_tsv(input_file)
 
 # WGS query and initial filtering
-
+print("Searching WGS data for discordant read pairs...\n")
 disc_reads <- input %>% 
   mutate(awk_chr = ifelse(fiveprime_chr == threeprime_chr, "=", threeprime_chr)) %>% 
   mutate(awk_chr2 = ifelse(fiveprime_chr == threeprime_chr, "=", fiveprime_chr)) %>% 
@@ -29,7 +41,7 @@ disc_reads <- input %>%
   mutate(threeprime_reads = map(cmd2, ~system2("samtools", args = .x, stdout = T)))
 
 # Additional filtering, create output table
-
+print("Applying discorandt read filtering steps...\n")
 disc_reads <- disc_reads %>% 
   select(fusion_id, fiveprime_strand, threeprime_strand, fiveprime_reads, threeprime_reads) %>% 
   pivot_longer(cols = c(fiveprime_reads, threeprime_reads), names_to = "query", values_to = "results") %>% 
@@ -51,7 +63,7 @@ disc_reads %>%
 # We want to find soft-clipped reads close to each discordant read, to see if the soft-clip represents the genomic breakpoint that gives rise to the fusion.
 # Discordant reads often form clusters, so instead of extracting soft-clipped reads around every discordant read, we extract them around every *cluster* of discordant reads.
 # This minimizes query time and prevents us from fetching the same soft-clipped read more than once. 
-
+print("Searching for breakpoint-supporting reads...\n")
 disc_read_clusters <- disc_reads %>% 
   mutate(width = nchar(SEQ), 
     start = as.numeric(POS)) %>% 
@@ -176,7 +188,7 @@ softclips <- softclips %>%
 
 disc_read_cluster_bed <- disc_read_clusters %>% 
   select(chr, start, end, disc_read_cluster_id) %>% 
-  mutate(chr = paste0("chr", chr))
+  mutate(chr = ifelse(str_detect(chr, "chr"), chr, paste0("chr", chr)))
 
 # Create a fasta file for each disc read cluster
 # This fasta file contains the sequences that are to be aligned to this cluster 
@@ -230,7 +242,7 @@ disc_read_cluster_bed %>%
 
 # Use bedtools to create fasta sequences ----
 
-system2(command = "bedtools", args = "getfasta -fi input/ref_genome_hg19/hg19.fa -bed output/discordant_read_clusters.bed -nameOnly > output/discordant_read_cluster_sequences.fa")
+system2(command = "bedtools", args = paste0("getfasta -fi ",ref_genome, " -bed output/discordant_read_clusters.bed -nameOnly > output/discordant_read_cluster_sequences.fa"))
 
 # Split discordant_read_cluster_sequences.fa into multiple smaller fasta files
 
@@ -266,6 +278,11 @@ list.files("output/discordant_read_cluster_sequences/") %>%
 # The files in softclip_fasta_files contain the sequences that are to be aligned to that cluster.
 
 # Example: We align the reads in output/softclip_fasta_files/disc_read_cluster_2_1.fa locally to output/discordant_read_cluster_sequences/2_1.fa 
+print("Performing alignments...\n")
+
+file.create("output/softclip_alignment.txt")
+file.create("output/softclip_alignment_log.txt")
+
 
 list.files("output/discordant_read_cluster_sequences/") %>% 
   as_tibble() %>% 
@@ -297,7 +314,7 @@ alignment <- alignment %>%
     right_softclip = str_extract(CIGAR, "\\d+(?=S)$") %>% as.numeric() %>% replace_na(0),
     insert_sum = str_extract_all(CIGAR, "\\d+(?=I)", simplify = T) %>% as.numeric() %>% map_dbl(~sum(.x) %>% replace_na(0))
     ) %>% 
-  mutate(breakpoint_coordinate = start + POS + nchar(SEQ)*should_shift -  left_softclip*should_shift - right_softclip*should_shift - insert_sum*should_shift) %>% 
+  mutate(breakpoint_coordinate = start + as.numeric(POS) + nchar(SEQ)*should_shift -  left_softclip*should_shift - right_softclip*should_shift - insert_sum*should_shift) %>% 
   filter(MAPQ >= 20) 
 
 
@@ -305,7 +322,7 @@ alignment <- alignment %>%
 
 softclips <- softclips %>% 
   mutate(sequence_aligns_to_other_fusion_partner = softclip_ID %in% alignment$QNAME) %>% 
-  mutate(breakpoint_coordinate = ifelse(expected_softclip_side == "left", POS - 1, str_extract(CIGAR, "\\d+(?=M)") %>% as.numeric() %>% magrittr::add(POS)))
+  mutate(breakpoint_coordinate = ifelse(expected_softclip_side == "left", as.numeric(POS) - 1, str_extract(CIGAR, "\\d+(?=M)") %>% as.numeric() %>% magrittr::add(as.numeric(POS))))
 
 
 # Generate summary tables --------------------------------------------------
@@ -368,4 +385,5 @@ softclip_summary_table <- softclip_summary_table %>%
 
 softclip_summary_table %>% 
   write_tsv("output/fusion_summary_table_breakpoint_supporting_reads.txt")
-  
+
+print("Done!")
