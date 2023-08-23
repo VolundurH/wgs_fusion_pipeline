@@ -239,6 +239,7 @@ disc_read_clusters %>%
   write_tsv("output/discordant_read_clusters.txt")
 
 disc_read_cluster_bed %>% 
+  mutate(start = start-1) |> 
   write_tsv("output/discordant_read_clusters.bed", col_names = F)
 
 
@@ -251,7 +252,7 @@ system2(command = "bedtools", args = paste0("getfasta -fi ",ref_genome, " -bed o
 disc_read_sequences <-  read_lines("output/discordant_read_cluster_sequences.fa") %>% 
   as_tibble()
 
-dir.create("output/discordant_read_cluster_sequences", )
+dir.create("output/discordant_read_cluster_sequences")
 
 disc_read_sequences %>% 
   mutate(grp = str_extract(value, "(?<=\\>).+")) %>% 
@@ -261,12 +262,14 @@ disc_read_sequences %>%
 
 # Index these multiple smaller fasta files with novoindex
 
+print("Indexing...")
+
 list.files("output/discordant_read_cluster_sequences/") %>% 
   as_tibble() %>% 
   filter(!str_detect(value, ".ndx$")) %>% 
   mutate(
-    cmd = "novoindex", 
-    args = paste0("output/discordant_read_cluster_sequences/", value, ".ndx output/discordant_read_cluster_sequences/", value)) %>% 
+    cmd = "singularity", 
+    args = paste0("exec singularity/fusion_pipeline.sif novoindex output/discordant_read_cluster_sequences/", value, ".ndx output/discordant_read_cluster_sequences/", value)) %>% 
   pwalk(~system2(command = ..2, args = ..3))
     
 
@@ -280,7 +283,7 @@ list.files("output/discordant_read_cluster_sequences/") %>%
 # The files in softclip_fasta_files contain the sequences that are to be aligned to that cluster.
 
 # Example: We align the reads in output/softclip_fasta_files/disc_read_cluster_2_1.fa locally to output/discordant_read_cluster_sequences/2_1.fa 
-print("Performing alignments...\n")
+print("Performing alignments...")
 
 file.create("output/softclip_alignment.txt")
 file.create("output/softclip_alignment_log.txt")
@@ -289,8 +292,8 @@ file.create("output/softclip_alignment_log.txt")
 list.files("output/discordant_read_cluster_sequences/") %>% 
   as_tibble() %>% 
   filter(!str_detect(value, ".ndx$")) %>% 
-  mutate(cmd = "novoalign",
-    args = paste0("-f output/softclip_fasta_files/disc_read_cluster_", value, " -d output/discordant_read_cluster_sequences/", value, ".ndx -r ALL -o SAM -h-1-1 -l6 >> output/softclip_alignment.txt 2>> output/softclip_alignment_log.txt" )) %>% 
+  mutate(cmd = "singularity",
+    args = paste0("exec singularity/fusion_pipeline.sif novoalign -f output/softclip_fasta_files/disc_read_cluster_", value, " -d output/discordant_read_cluster_sequences/", value, ".ndx -r ALL -o SAM -h-1-1 -l6 >> output/softclip_alignment.txt 2>> output/softclip_alignment_log.txt" )) %>% 
   pwalk(~system2(command = ..2, args = ..3))
 
 alignment <- read_tsv("output/softclip_alignment.txt", comment = "@", col_names = sam_fields) %>% 
@@ -313,9 +316,9 @@ alignment <- alignment %>%
   mutate(should_shift = (query == "fiveprime_reads" & strand == "+") | (query == "threeprime_reads" & strand == "-")) %>% 
   mutate(
     left_softclip = str_extract(CIGAR, "^\\d+(?=S)") %>% as.numeric() %>% replace_na(0),
-    right_softclip = str_extract(CIGAR, "\\d+(?=S)$") %>% as.numeric() %>% replace_na(0),
-    insert_sum = str_extract_all(CIGAR, "\\d+(?=I)", simplify = T) %>% as.numeric() %>% map_dbl(~sum(.x) %>% replace_na(0))
-    ) %>% 
+    right_softclip = str_extract(CIGAR, "\\d+(?=S$)") %>% as.numeric() %>% replace_na(0),
+    insert_sum = str_extract_all(CIGAR, "\\d+(?=I)")) %>% 
+  mutate(insert_sum = map_dbl(insert_sum, ~as.numeric(.x) |> sum())) |> 
   mutate(breakpoint_coordinate = start + as.numeric(POS) + nchar(SEQ)*should_shift -  left_softclip*should_shift - right_softclip*should_shift - insert_sum*should_shift) %>% 
   filter(MAPQ >= 20) 
 
@@ -361,22 +364,27 @@ summary_table %>%
 softclip_summary_table <-  alignment %>% 
   mutate(breakpoint_coordinate = paste0(chr, ":", breakpoint_coordinate)) %>% 
   select(softclip_ID = QNAME, query_alignment = query, breakpoint_coordinate_alignment = breakpoint_coordinate) %>% 
+  group_by(softclip_ID, query_alignment) |> 
+  summarise(breakpoint_coordinate_alignment = paste0(breakpoint_coordinate_alignment, collapse = ";")) |> 
+  ungroup() |> 
   full_join(
     softclips %>% 
       filter(sequence_aligns_to_other_fusion_partner) %>% 
       mutate(breakpoint_coordinate = paste0(chr, ":", breakpoint_coordinate)) %>% 
-      select(softclip_ID, query_softclip = query, breakpoint_coordinate_softclip = breakpoint_coordinate)
-  ) %>% 
+      select(softclip_ID, query_softclip = query, breakpoint_coordinate_softclip = breakpoint_coordinate) |> 
+      group_by(softclip_ID, query_softclip) |> 
+      summarise(breakpoint_coordinate_softclip = paste0(breakpoint_coordinate_softclip, collapse = ";")) |> 
+      ungroup()) |> 
   mutate(
     col1 = paste0(query_alignment, ";", breakpoint_coordinate_alignment),
     col2 = paste0(query_softclip, ";", breakpoint_coordinate_softclip)
-    ) %>% 
+  ) %>% 
   select(softclip_ID, col1, col2) %>% 
   pivot_longer(cols = -softclip_ID) %>% 
   select(-name) %>% 
-  separate(value, into = c("fusion_partner", "breakpoint_coordinate" ), sep = ";") %>% 
+  separate(value, into = c("fusion_partner", "breakpoint_coordinate" ), sep = ";", extra = "merge") %>% 
   mutate(fusion_partner = str_replace(fusion_partner, "_reads", "_breakpoint_coordinate")) %>% 
-  pivot_wider(names_from = fusion_partner, values_from = breakpoint_coordinate)
+  pivot_wider(names_from = fusion_partner, values_from = breakpoint_coordinate) 
 
 softclip_summary_table <- softclip_summary_table %>% 
   left_join(
